@@ -1,1 +1,13 @@
-
+name: Build unsigned IPA
+on: workflow_dispatch
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - run: bash .github/scripts/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: placard-unsigned
+          path: build/*.ipa
