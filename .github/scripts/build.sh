@@ -32,8 +32,14 @@ python3 .github/scripts/package-ipa.py \
   --app "$RUNNER_TEMP/placard.xcarchive/Products/Applications/placard.app" \
   --output "build/placard-v${VERSION}-unsigned.ipa"
 
-APP="$RUNNER_TEMP/placard.xcarchive/Products/Applications/placard.app"
+# 校验要针对「打好包的 IPA」，archive 里那个 app 本来就没签名
+rm -rf "$RUNNER_TEMP/verify"
+mkdir -p "$RUNNER_TEMP/verify"
+ditto -x -k "build/placard-v${VERSION}-unsigned.ipa" "$RUNNER_TEMP/verify"
+APP="$RUNNER_TEMP/verify/Payload/placard.app"
+
 echo "built: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist") $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")"
+codesign --verify --strict "$APP" && echo "signature: ok"
 
 codesign -d --entitlements :- "$APP" > "$RUNNER_TEMP/entitlements.plist" 2>/dev/null || true
 cat "$RUNNER_TEMP/entitlements.plist"
@@ -41,3 +47,4 @@ grep -q "application-groups" "$RUNNER_TEMP/entitlements.plist" \
   || { echo "::error::App Group entitlement missing, worse_query will not work"; exit 1; }
 
 ls -lh build/
+shasum -a 256 build/*.ipa
