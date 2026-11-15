@@ -38,7 +38,7 @@ Documents/WallpaperPackages/<壁纸名>-<FNV1a tag>.tendies
 
 ### 4. 顺手的两处
 
-- `Documents` 目录对「文件」App 可见（`UIFileSharingEnabled` + `LSSupportsOpeningDocumentsInPlace`），导出的包能直接在 Files 里拖走。
+- `Documents` 目录对「文件」App 可见，导出的包能直接在 Files 里拖走。注意 `INFOPLIST_KEY_UIFileSharingEnabled` 在 Xcode 里不生效，所以是在 `build.sh` 打包前用 PlistBuddy 注入的（并校验），本地直接 Xcode 跑不会带这个键。
 - 版本号 2.0.3 → **2.1.2**，build 1 → 2。
 
 ## 改了哪些文件

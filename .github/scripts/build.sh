@@ -28,8 +28,19 @@ xcodebuild archive \
   PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
   MARKETING_VERSION="$VERSION"
 
+APP="$RUNNER_TEMP/placard.xcarchive/Products/Applications/placard.app"
+
+# INFOPLIST_KEY_UIFileSharingEnabled 在 Xcode 里不生效（不在可注入的键表里），
+# 只能在这里补，补完再签名打包。
+for key in UIFileSharingEnabled LSSupportsOpeningDocumentsInPlace; do
+  if ! /usr/libexec/PlistBuddy -c "Add :$key bool true" "$APP/Info.plist" 2>/dev/null; then
+    /usr/libexec/PlistBuddy -c "Set :$key true" "$APP/Info.plist"
+  fi
+  echo "$key = $(/usr/libexec/PlistBuddy -c "Print :$key" "$APP/Info.plist")"
+done
+
 python3 .github/scripts/package-ipa.py \
-  --app "$RUNNER_TEMP/placard.xcarchive/Products/Applications/placard.app" \
+  --app "$APP" \
   --output "build/placard-v${VERSION}-unsigned.ipa"
 
 # 校验要针对「打好包的 IPA」，archive 里那个 app 本来就没签名
@@ -40,6 +51,8 @@ APP="$RUNNER_TEMP/verify/Payload/placard.app"
 
 echo "built: $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist") $(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")"
 codesign --verify --strict "$APP" && echo "signature: ok"
+/usr/libexec/PlistBuddy -c "Print :UIFileSharingEnabled" "$APP/Info.plist" >/dev/null \
+  || { echo "::error::UIFileSharingEnabled missing"; exit 1; }
 
 codesign -d --entitlements :- "$APP" > "$RUNNER_TEMP/entitlements.plist" 2>/dev/null || true
 cat "$RUNNER_TEMP/entitlements.plist"
